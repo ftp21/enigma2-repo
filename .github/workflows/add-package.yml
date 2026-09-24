@@ -15,6 +15,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: gh-pages
+          fetch-depth: 0
+
+      - name: Checkout main (index script)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: _main
 
       - name: Download released ipk
         env:
@@ -36,6 +43,8 @@ jobs:
         run: |
           opkg-make-index . > Packages
           gzip -kf Packages
+          python3 _main/scripts/gen_index.py .
+          rm -rf _main
 
       - name: Commit and push
         run: |
