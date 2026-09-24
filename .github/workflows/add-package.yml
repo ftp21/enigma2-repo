@@ -16,14 +16,16 @@ jobs:
         with:
           ref: gh-pages
           fetch-depth: 0
+          path: feed
 
       - name: Checkout main (index scripts)
         uses: actions/checkout@v4
         with:
           ref: main
-          path: _main
+          path: scripts-src
 
       - name: Update feed
+        working-directory: feed
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SOURCE_REPO: ${{ github.event.client_payload.repo }}
@@ -46,11 +48,11 @@ jobs:
           # before retrying, instead of clobbering it.
           for attempt in 1 2 3 4 5; do
             gh release download "$SOURCE_TAG" --repo "$SOURCE_REPO" --pattern "$SOURCE_ASSET" --dir . --clobber
-            python3 _main/scripts/gen_packages_index.py .
+            python3 ../scripts-src/scripts/gen_packages_index.py .
             gzip -kf Packages
-            python3 _main/scripts/gen_index.py .
+            python3 ../scripts-src/scripts/gen_index.py .
 
-            git add -A -- . ':!_main'
+            git add -A .
             if git diff --cached --quiet; then
               echo "Nothing to commit."
               exit 0
