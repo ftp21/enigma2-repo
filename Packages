@@ -13,3 +13,20 @@ Filename: enigma2-plugin-extensions-settingshub_0.2.0_all.ipk
 Size: 48032
 MD5Sum: 675b9c86b4204b08ff2bef73ca43e88f
 SHA256sum: 7f8672ab9e9178d5ace44916b29aa52b11ec36af8d2e2236384cdd8d6da44f31
+
+Package: enigma2-plugin-systemplugins-lcnscanner
+Version: 0.1.0
+Section: systemplugins
+Priority: optional
+Architecture: all
+Maintainer: ftp21 <https://github.com/ftp21>
+Source: https://github.com/ftp21/LCNScanner
+Installed-Size: 128
+Description: LCN Scanner plugin per servizi DVB-C/T/T2
+ Analizza il database LCN e crea/aggiorna i bouquet in base ai canali
+ numerati (LCN), con risoluzione interattiva dei duplicati e scelta di
+ destinazione/posizione/nome del bouquet.
+Filename: enigma2-plugin-systemplugins-lcnscanner_0.1.0_all.ipk
+Size: 23064
+MD5Sum: 04c705c0bc37f0456bde437af46e5799
+SHA256sum: 3641bee363d6a09b1a12836341b5f790fe120a052e9b9b854953dbd693a38fda
