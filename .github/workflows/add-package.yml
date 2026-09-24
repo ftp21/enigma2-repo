@@ -36,12 +36,9 @@ jobs:
           fi
           gh release download "$SOURCE_TAG" --repo "$SOURCE_REPO" --pattern "$SOURCE_ASSET" --dir . --clobber
 
-      - name: Install opkg-utils
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq opkg-utils
-
       - name: Rebuild package index
         run: |
-          opkg-make-index . > Packages
+          python3 _main/scripts/gen_packages_index.py .
           gzip -kf Packages
           python3 _main/scripts/gen_index.py .
           rm -rf _main
