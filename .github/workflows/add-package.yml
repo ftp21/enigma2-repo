@@ -1,0 +1,50 @@
+name: Add package to feed
+
+on:
+  repository_dispatch:
+    types: [plugin_release]
+
+permissions:
+  contents: write
+
+jobs:
+  add-package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout gh-pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+
+      - name: Download released ipk
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SOURCE_REPO: ${{ github.event.client_payload.repo }}
+          SOURCE_TAG: ${{ github.event.client_payload.tag }}
+          SOURCE_ASSET: ${{ github.event.client_payload.asset }}
+        run: |
+          if [ -z "$SOURCE_REPO" ] || [ -z "$SOURCE_TAG" ] || [ -z "$SOURCE_ASSET" ]; then
+            echo "Missing client_payload (repo/tag/asset)." >&2
+            exit 1
+          fi
+          gh release download "$SOURCE_TAG" --repo "$SOURCE_REPO" --pattern "$SOURCE_ASSET" --dir . --clobber
+
+      - name: Install opkg-utils
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq opkg-utils
+
+      - name: Rebuild package index
+        run: |
+          opkg-make-index . > Packages
+          gzip -kf Packages
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Add ${SOURCE_ASSET} from ${SOURCE_REPO}@${SOURCE_TAG}" || { echo "Nothing to commit"; exit 0; }
+          git push
+        env:
+          SOURCE_REPO: ${{ github.event.client_payload.repo }}
+          SOURCE_TAG: ${{ github.event.client_payload.tag }}
+          SOURCE_ASSET: ${{ github.event.client_payload.asset }}
