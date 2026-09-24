@@ -17,13 +17,13 @@ jobs:
           ref: gh-pages
           fetch-depth: 0
 
-      - name: Checkout main (index script)
+      - name: Checkout main (index scripts)
         uses: actions/checkout@v4
         with:
           ref: main
           path: _main
 
-      - name: Download released ipk
+      - name: Update feed
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SOURCE_REPO: ${{ github.event.client_payload.repo }}
@@ -34,23 +34,38 @@ jobs:
             echo "Missing client_payload (repo/tag/asset)." >&2
             exit 1
           fi
-          gh release download "$SOURCE_TAG" --repo "$SOURCE_REPO" --pattern "$SOURCE_ASSET" --dir . --clobber
-
-      - name: Rebuild package index
-        run: |
-          python3 _main/scripts/gen_packages_index.py .
-          gzip -kf Packages
-          python3 _main/scripts/gen_index.py .
-          rm -rf _main
-
-      - name: Commit and push
-        run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
-          git commit -m "Add ${SOURCE_ASSET} from ${SOURCE_REPO}@${SOURCE_TAG}" || { echo "Nothing to commit"; exit 0; }
-          git push
-        env:
-          SOURCE_REPO: ${{ github.event.client_payload.repo }}
-          SOURCE_TAG: ${{ github.event.client_payload.tag }}
-          SOURCE_ASSET: ${{ github.event.client_payload.asset }}
+
+          # Two dispatches landing close together (e.g. two plugins released
+          # around the same time) can both start from the same gh-pages
+          # commit and then race on `git push` - the loser's push is a
+          # plain rejection (not a merge conflict, since each dispatch only
+          # ever adds its own new ipk), so it just needs to pull the
+          # winner's commit and rebuild the index again including that ipk
+          # before retrying, instead of clobbering it.
+          for attempt in 1 2 3 4 5; do
+            gh release download "$SOURCE_TAG" --repo "$SOURCE_REPO" --pattern "$SOURCE_ASSET" --dir . --clobber
+            python3 _main/scripts/gen_packages_index.py .
+            gzip -kf Packages
+            python3 _main/scripts/gen_index.py .
+
+            git add -A -- . ':!_main'
+            if git diff --cached --quiet; then
+              echo "Nothing to commit."
+              exit 0
+            fi
+            git commit -m "Add ${SOURCE_ASSET} from ${SOURCE_REPO}@${SOURCE_TAG}"
+
+            if git push; then
+              exit 0
+            fi
+
+            echo "Push rejected (attempt ${attempt}/5), fetching latest gh-pages and retrying..."
+            git fetch origin gh-pages
+            git reset --hard origin/gh-pages
+            sleep "$(( (RANDOM % 5) + 1 ))"
+          done
+
+          echo "Error: could not push to gh-pages after 5 attempts." >&2
+          exit 1

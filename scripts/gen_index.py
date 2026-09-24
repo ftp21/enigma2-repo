@@ -18,7 +18,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-EXCLUDE = {"index.html", ".git", ".github", "scripts", "README.md"}
+EXCLUDE = {"index.html", ".git", ".github", "scripts", "README.md", "_main"}
 
 
 def humanSize(numBytes):
